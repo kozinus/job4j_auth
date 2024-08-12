@@ -62,6 +62,12 @@
 			<optional>true</optional>
 		</dependency>
 		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<version>1.4.190</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
@@ -113,15 +119,6 @@
 	</build>
 
 	<profiles>
-		<profile>
-			<id>test</id>
-			<properties>
-				<liquibase.config>db/liquibase_test.properties</liquibase.config>
-			</properties>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-		</profile>
 		<profile>
 			<id>production</id>
 			<properties>
