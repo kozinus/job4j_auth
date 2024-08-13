@@ -22,10 +22,9 @@ public class PersonController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Person> findById(@PathVariable int id) {
-        var person = this.persons.findPersonById(id);
-        return new ResponseEntity<Person>(
-                person.orElse(new Person()),
-                person.isPresent() ? HttpStatus.OK : HttpStatus.NOT_FOUND
+        return persons.findPersonById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build()
         );
     }
 
@@ -33,12 +32,13 @@ public class PersonController {
     public ResponseEntity<Person> create(@RequestBody Person person) {
         return persons.save(person)
                 .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT).build()
+        );
     }
 
     @PutMapping("/")
     public ResponseEntity<Void> update(@RequestBody Person person) {
-        if (persons.save(person).isPresent()) {
+        if (persons.update(person)) {
             return ResponseEntity.ok().build();
         } else {
             return ResponseEntity.notFound().build();
