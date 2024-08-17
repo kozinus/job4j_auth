@@ -43,6 +43,10 @@ public class PersonService {
         return personRepository.findById(id);
     }
 
+    public Optional<Person> findPersonByName(String name) {
+        return personRepository.findByLogin(name);
+    }
+
     public List<Person> findAll() {
         return personRepository.findAll();
     }
