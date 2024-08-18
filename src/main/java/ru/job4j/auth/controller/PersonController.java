@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import ru.job4j.auth.service.PersonService;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.TreeMap;
 
 @RestController
 @RequestMapping("/users")
@@ -36,9 +38,20 @@ public class PersonController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Person> findById(@PathVariable int id) {
+    public ResponseEntity<String> findById(@PathVariable int id) {
         return persons.findPersonById(id)
-                .map(ResponseEntity::ok)
+                .map(x -> {
+                    var body = new TreeMap<>() {{
+                        put("Id", x.getId());
+                        put("Username", encoder.encode(x.getLogin()));
+                        put("Password", x.getPassword());
+                    }}.toString();
+                    return ResponseEntity.status(HttpStatus.OK)
+                            .header("EncodedUsernameProfile", "Job4j")
+                            .contentType(MediaType.TEXT_PLAIN)
+                            .contentLength(body.length())
+                            .body(body);
+                })
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User is not found.")
                 );
