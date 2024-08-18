@@ -2,6 +2,7 @@ package ru.job4j.auth.controller;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import java.io.IOException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.auth.domain.Person;
@@ -23,6 +25,7 @@ import java.util.TreeMap;
 @RestController
 @RequestMapping("/users")
 @AllArgsConstructor
+@Validated
 public class PersonController {
     private static final Logger LOGGER = LoggerFactory.getLogger(PersonController.class.getSimpleName());
 
@@ -43,7 +46,7 @@ public class PersonController {
                 .map(x -> {
                     var body = new TreeMap<>() {{
                         put("Id", x.getId());
-                        put("Username", encoder.encode(x.getLogin()));
+                        put("Username", x.getLogin());
                         put("Password", x.getPassword());
                     }}.toString();
                     return ResponseEntity.status(HttpStatus.OK)
@@ -58,7 +61,21 @@ public class PersonController {
     }
 
     @PostMapping("/sign-up")
-    public ResponseEntity<Person> create(@RequestBody Person person) {
+    @Validated(Operation.OnCreate.class)
+    public ResponseEntity<Person> create(@Valid @RequestBody Person person) {
+        var password = person.getPassword();
+        var username = person.getLogin();
+
+        person.setPassword(encoder.encode(person.getPassword()));
+        return persons.save(person)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT).build()
+        );
+    }
+
+    @PutMapping("/")
+    @Validated(Operation.OnUpdate.class)
+    public ResponseEntity<Void> update(@Valid @RequestBody Person person) {
         var password = person.getPassword();
         var username = person.getLogin();
         if (username == null || password == null) {
@@ -73,15 +90,6 @@ public class PersonController {
         if (password.length() < 8) {
             throw new IllegalArgumentException("Invalid password. Password length must be more than 7 characters.");
         }
-        person.setPassword(encoder.encode(person.getPassword()));
-        return persons.save(person)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT).build()
-        );
-    }
-
-    @PutMapping("/")
-    public ResponseEntity<Void> update(@RequestBody Person person) {
         if (persons.update(person)) {
             return ResponseEntity.ok().build();
         } else {
@@ -90,7 +98,8 @@ public class PersonController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
+    @Validated(Operation.OnDelete.class)
+    public ResponseEntity<Void> delete(@Valid @PathVariable int id) {
         if (persons.deleteById(id)) {
             return ResponseEntity.ok().build();
         } else {
