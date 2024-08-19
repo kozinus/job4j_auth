@@ -5,7 +5,6 @@ import lombok.*;
 import ru.job4j.auth.controller.Operation;
 
 import javax.persistence.*;
-import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 
@@ -25,12 +24,12 @@ public class Person {
 
     @JsonProperty("username")
     @NotBlank(message = "Username must be not empty", groups = {
-            Operation.OnCreate.class, Operation.OnUpdate.class
+            Operation.OnCreate.class
     })
     private String login;
 
-    @Min(value = 7, message = "Year must be more than 7", groups = {
-            Operation.OnCreate.class, Operation.OnUpdate.class
+    @NotBlank(message = "password must be not empty", groups = {
+            Operation.OnCreate.class
     })
     private String password;
 }

@@ -9,7 +9,6 @@ import lombok.AllArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.validation.annotation.Validated;
@@ -18,9 +17,9 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.job4j.auth.domain.Person;
 import ru.job4j.auth.service.PersonService;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.TreeMap;
 
 @RestController
 @RequestMapping("/users")
@@ -41,20 +40,9 @@ public class PersonController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<String> findById(@PathVariable int id) {
+    public ResponseEntity<Person> findById(@PathVariable int id) {
         return persons.findPersonById(id)
-                .map(x -> {
-                    var body = new TreeMap<>() {{
-                        put("Id", x.getId());
-                        put("Username", x.getLogin());
-                        put("Password", x.getPassword());
-                    }}.toString();
-                    return ResponseEntity.status(HttpStatus.OK)
-                            .header("EncodedUsernameProfile", "Job4j")
-                            .contentType(MediaType.TEXT_PLAIN)
-                            .contentLength(body.length())
-                            .body(body);
-                })
+                .map(ResponseEntity::ok)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "User is not found.")
                 );
@@ -65,6 +53,12 @@ public class PersonController {
     public ResponseEntity<Person> create(@Valid @RequestBody Person person) {
         var password = person.getPassword();
         var username = person.getLogin();
+        if (password.length() < 8) {
+            throw new IllegalArgumentException("Invalid password. Password length must be more than 7 characters.");
+        }
+        if (persons.findPersonByName(username).isPresent()) {
+            throw new IllegalArgumentException("Invalid username. Username must be unique");
+        }
 
         person.setPassword(encoder.encode(person.getPassword()));
         return persons.save(person)
@@ -73,28 +67,20 @@ public class PersonController {
         );
     }
 
-    @PutMapping("/")
+    @PatchMapping("/")
     @Validated(Operation.OnUpdate.class)
-    public ResponseEntity<Void> update(@Valid @RequestBody Person person) {
+    public ResponseEntity<Person> update(@Valid @RequestBody Person person) throws InvocationTargetException, IllegalAccessException {
         var password = person.getPassword();
         var username = person.getLogin();
-        if (username == null || password == null) {
-            throw new NullPointerException("Username and password mustn't be empty");
-        }
-        if (persons.findPersonByName(username).isPresent()) {
-            throw new IllegalArgumentException("Invalid username. Username must be unique");
-        }
-        if (username.length() < 1) {
-            throw new IllegalArgumentException("Invalid username. Username must contain at least one character");
-        }
-        if (password.length() < 8) {
+        if (password != null && password.length() < 8) {
             throw new IllegalArgumentException("Invalid password. Password length must be more than 7 characters.");
         }
-        if (persons.update(person)) {
-            return ResponseEntity.ok().build();
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User is not found and cannot be modified");
+        if (username != null && persons.findPersonByName(username).isPresent()) {
+            throw new IllegalArgumentException("Invalid username. Username must be unique");
         }
+        return persons.update(person)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT).build());
     }
 
     @DeleteMapping("/{id}")
