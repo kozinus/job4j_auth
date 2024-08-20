@@ -12,10 +12,10 @@ target/
 .settings
 .springBeans
 .sts4-cache
-.db
 
 ### IntelliJ IDEA ###
 .idea
+*.db
 *.iws
 *.iml
 *.ipr
